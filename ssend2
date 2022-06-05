@@ -1,0 +1,13 @@
+#
+if [ $# -ne 2 ]
+then
+    echo "usage: $(basename $0) local_file remote_file" >&2
+    exit 1
+fi
+
+tmpfile="$(mktemp -t srecv_server2XXXXX)"
+trap "rm -f $tmpfile" ERR SIGHUP SIGINT SIGTERM
+echo "$2" > "$tmpfile"
+socat -b 1024 -u GOPEN:"$tmpfile" TCP:"$SSH_REMOTE":7890 || "rm -f $tmpfile ; exit 1"
+# socat -b 65536 -u GOPEN:"$1" TCP:"$SSH_REMOTE":7891,nodelay
+pv "$1" | socat -b 65536 -u STDIN TCP:"$SSH_REMOTE":7891,nodelay
