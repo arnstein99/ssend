@@ -7,7 +7,7 @@ chunksize=65536
 
 # If you have pv installed, you can use it here by defining some options to pv
 # here.
-declare -a pv_options=(-p -t -e -r -b)
+# declare -a pv_options=(-p -t -e -r -b)
 
 ##############
 # End tuning #
