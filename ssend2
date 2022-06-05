@@ -1,13 +1,38 @@
 #
-if [ $# -ne 2 ]
+
+# These numbers should match those on the client
+mainport=7890
+hailingport=7891
+chunksize=65536
+
+# If you have pv installed, you can use it here by defining some options to pv
+# here.
+declare -a pv_options=(-p -t -e -r -b)
+
+##############
+# End tuning #
+##############
+
+if [ $# -ne 3 ]
 then
-    echo "usage: $(basename $0) local_file remote_file" >&2
+    echo "usage: $(basename $0) local_file remote_host remote_file" >&2
     exit 1
 fi
+local_file="$1"
+remote_host="$2"
+remote_file="$3"
 
 tmpfile="$(mktemp -t srecv_server2XXXXX)"
 trap "rm -f $tmpfile" ERR SIGHUP SIGINT SIGTERM
-echo "$2" > "$tmpfile"
-socat -b 1024 -u GOPEN:"$tmpfile" TCP:"$SSH_REMOTE":7890 || "rm -f $tmpfile ; exit 1"
-# socat -b 65536 -u GOPEN:"$1" TCP:"$SSH_REMOTE":7891,nodelay
-pv "$1" | socat -b 65536 -u STDIN TCP:"$SSH_REMOTE":7891,nodelay
+echo "$remote_file" > "$tmpfile"
+socat -b 1024 -u GOPEN:"$tmpfile" TCP:"$remote_host":"$mainport" || \
+    "rm -f $tmpfile ; exit 1"
+
+if [ "x${pv_options}" == x ]
+then
+    socat -b "$chunksize" -u \
+        GOPEN:"$local_file" TCP:"$remote_host":"$hailingport",nodelay
+else
+    pv "${pv_options[@]}" "$local_file" | \
+        socat -b "$chunksize" -u STDIN TCP:"$remote_host":"$hailingport",nodelay
+fi
