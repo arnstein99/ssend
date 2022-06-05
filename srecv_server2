@@ -1,0 +1,38 @@
+#
+
+# Tuning
+mainport=7890
+hailingport=7891
+
+namefile="$(mktemp -t srecv_server2)"
+tmpfile="$(mktemp -t srecv_server2)"
+declare -i pid
+
+function listener
+{
+    while true
+    do
+	sleep 0.5
+	socat -u -b 1024 TCP-LISTEN:"$hailingport" CREATE:"$tmpfile" && break
+    done
+}
+
+function cleanup
+{
+    rm -f "$namefile"
+    kill -9 %1
+}
+
+cd
+while true
+do
+    trap "break" ERR SIGHUP SIGINT SIGTERM
+    listener &
+    socat -u -b 65536 TCP-LISTEN:"$mainport",nodelay CREATE:"$namefile" || continue
+    receive_file=$(cat "$namefile")
+    echo -n "$(date) receiving $receive_file ..."
+    wait
+    mv "$tmpfile" "$receive_file" || continue
+    echo " done"
+done
+cleanup
