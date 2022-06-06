@@ -1,4 +1,4 @@
-# ssend Unsecure file transfer for VPN
+# ssend: Unsecure file transfer for VPN
 
 ## Why Bother
 
@@ -24,7 +24,7 @@ message. At the top of the file are some tuning parameters that you can change.
 
 ### ssend2
 
-This is the client, it sends a single file to a remote server (srecv_server2).
+This is the client, it sends a single file to a remote server ('srecv_server2`).
 Launch it once and it will service multiple clients. Launch without arguments
 to obtain a help message. At the top of the file are some tuning parameters
 that you can change.
@@ -32,3 +32,8 @@ that you can change.
 ## Testing
 
 I have tested `ssend2` on Linux. I have tested `srecv_server2` on MacOS.
+
+## Bugs
+
+The client program `ssend2` does not provide feedback when the server
+encounters an error.

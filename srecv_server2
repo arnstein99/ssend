@@ -5,8 +5,8 @@
 ##########
 
 # These numbers should match those on the client
-mainport=7890
-hailingport=7891
+hailingport=7890
+mainport=7891
 chunksize=65536
 
 ##############
@@ -15,8 +15,45 @@ chunksize=65536
 
 namefile="$(mktemp -t srecv_server2)"
 tmpfile="$(mktemp -t srecv_server2)"
-declare -i pid
 
+function main
+# listening address
+{
+    if [ $# -ne 1 ]
+    then
+	echo Usage: srecv_server2 listening-address >&2
+	exit 1
+    fi
+    listeningaddress="$1"
+
+    cd
+    while true
+    do
+	trap "break" ERR SIGHUP SIGINT SIGTERM
+	listener "$listeningaddress" &
+
+	# Fetch the name of the local file
+	socat -u -b 1024 \
+	    TCP-LISTEN:"$hailingport",bind="$listeningaddress",nodelay \
+	    CREATE:"$namefile" || break
+	receive_file=$(cat "$namefile")
+	echo -n "$(date) receiving $receive_file ..."
+
+	# Wait for the listener to finish receiving file
+	wait
+
+	if [ ! -e "$tmpfile" ]
+	then
+	    break
+	fi
+	mv "$tmpfile" "$receive_file" || continue
+	echo " done"
+    done
+    cleanup
+}
+
+# This function blocks waiting for an incoming file. The desired local
+# name for the file is not known, so a temporary name is used.
 function listener
 # listening-address
 {
@@ -24,41 +61,17 @@ function listener
     for try in {1..5}
     do
 	sleep 0.5
-	socat -u -b 1024 TCP-LISTEN:"$hailingport",bind="$1" \
+	socat -u -b "$chunksize" TCP-LISTEN:"$mainport",bind="$1" \
 	    CREATE:"$tmpfile" || continue
         return
     done
 }
+
+# Begin execution
+main "$@"
 
 function cleanup
 {
     rm -f "$namefile"
     kill -9 %1
 }
-
-if [ $# -ne 1 ]
-then
-    echo Usage: $(basename "$0") listening-address >&2
-    exit 1
-fi
-listeningaddress="$1"
-
-cd
-while true
-do
-    trap "break" ERR SIGHUP SIGINT SIGTERM
-    listener "$listeningaddress" &
-    socat -u -b "$chunksize" \
-        TCP-LISTEN:"$mainport",bind="$listeningaddress",nodelay \
-        CREATE:"$namefile" || break
-    receive_file=$(cat "$namefile")
-    echo -n "$(date) receiving $receive_file ..."
-    wait
-    if [ ! -e "$tmpfile" ]
-    then
-        break
-    fi
-    mv "$tmpfile" "$receive_file" || continue
-    echo " done"
-done
-cleanup
