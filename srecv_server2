@@ -7,7 +7,7 @@
 # These numbers should match those on the client
 hailingport=7890
 mainport=7891
-chunksize=65536
+chunksize=1048576
 
 ##############
 # End tuning #
@@ -27,28 +27,40 @@ function main
     listeningaddress="$1"
 
     cd
+    trap "break" ERR SIGHUP SIGINT SIGTERM
     while true
     do
-	trap "break" ERR SIGHUP SIGINT SIGTERM
 	listener "$listeningaddress" &
 
 	# Fetch the name of the local file
 	socat -u -b 1024 \
-	    TCP-LISTEN:"$hailingport",bind="$listeningaddress",nodelay \
+	    TCP-LISTEN:"$hailingport",bind="$listeningaddress" \
 	    CREATE:"$namefile" || break
 	receive_file=$(cat "$namefile")
-	echo -n "$(date) receiving $receive_file ..."
+
+	# Error check
+	if [ -d "$receive_file" ]
+	then
+	    echo "$(date) ERROR: \"${receive_file}\" is a directory"
+	    wait
+	    continue
+	fi
 
 	# Wait for the listener to finish receiving file
+	echo -n "$(date) receiving $receive_file ..."
 	wait
 
+	# Another error check
 	if [ ! -e "$tmpfile" ]
 	then
-	    break
+	    echo ""
+	    echo "ERROR: could not find temporary file"
+	    continue
 	fi
 	mv "$tmpfile" "$receive_file" || continue
 	echo " done"
     done
+    trap "" ERR SIGHUP SIGINT SIGTERM
     cleanup
 }
 
@@ -67,11 +79,11 @@ function listener
     done
 }
 
-# Begin execution
-main "$@"
-
 function cleanup
 {
     rm -f "$namefile"
     kill -9 %1
 }
+
+# Begin execution
+main "$@"
