@@ -33,6 +33,13 @@ that you can change.
 
 I have tested `ssend2` on Linux. I have tested `srecv_server2` on MacOS.
 
+## Tuning
+
+The `chunksize` tuning paramter is featured at the top of both
+scripts. A value of 1314 may be helpful if the data exchange is within
+a Cisco AnyConnect[tm] VPN. Inspecting packet sizes with `tcpdump`
+gave me this idea.
+
 ## Bugs
 
 The client program `ssend2` does not provide feedback when the server
