@@ -1,0 +1,37 @@
+#
+
+# These numbers should match those on the client
+hailingport=7890
+mainport=7891
+
+# If you have pv installed, you can use it here by defining some options to pv
+# here.
+# declare -a pv_options=(-p -t -e -r -b)
+
+##############
+# End tuning #
+##############
+
+if [ $# -ne 3 ]
+then
+    echo "usage: $(basename $0) local_file remote_host remote_file" >&2
+    exit 1
+fi
+local_file="$1"
+remote_host="$2"
+remote_file="$3"
+
+tmpfile="$(mktemp -t srecv_server2XXXXX)"
+trap "rm -f $tmpfile" ERR SIGHUP SIGINT SIGTERM
+
+# Send the name of the file to the server
+echo "$remote_file" | \
+    tcpput "$remote_host" "$hailingport" || exit 1
+
+if [ "x${pv_options}" == x ]
+then
+    tcpput "$remote_host" "$mainport" < "$local_file"
+else
+    pv "${pv_options[@]}" "$local_file" | \
+        tcpput "$remote_host" "$mainport"
+fi

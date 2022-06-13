@@ -1,0 +1,82 @@
+#
+
+##########
+# Tuning #
+##########
+
+# These numbers should match those on the client
+hailingport=7890
+mainport=7891
+
+##############
+# End tuning #
+##############
+
+namefile="$(mktemp -t srecv_server2XXXX)"
+tmpfile="$(mktemp -t srecv_server2XXXX)"
+
+function main
+{
+    if [ $# -ne 0 ]
+    then
+	echo Usage: srecv_server2 >&2
+	exit 1
+    fi
+
+    cd
+    trap "break" ERR SIGHUP SIGINT SIGTERM
+    while true
+    do
+	listener &
+
+	# Fetch the name of the local file
+	tcpget "$hailingport" > "$namefile"
+	receive_file=$(cat "$namefile")
+
+	# Error check
+	if [ -d "$receive_file" ]
+	then
+	    echo "$(date) ERROR: \"${receive_file}\" is a directory"
+	    wait
+	    continue
+	fi
+
+	# Wait for the listener to finish receiving file
+	echo -n "$(date) receiving $receive_file ..."
+	wait
+
+	# Another error check
+	if [ ! -e "$tmpfile" ]
+	then
+	    echo ""
+	    echo "ERROR: could not find temporary file"
+	    continue
+	fi
+	mv "$tmpfile" "$receive_file" || continue
+	echo " done"
+    done
+    trap "" ERR SIGHUP SIGINT SIGTERM
+    cleanup
+}
+
+# This function blocks waiting for an incoming file. The desired local
+# name for the file is not known, so a temporary name is used.
+function listener
+{
+    # Five tries to access the listening port
+    for try in {1..5}
+    do
+	sleep 0.5
+	tcpget "$mainport" > "$tmpfile" || continue
+        return
+    done
+}
+
+function cleanup
+{
+    rm -f "$namefile"
+    kill -9 %1
+}
+
+# Begin execution
+main "$@"
