@@ -30,7 +30,7 @@ function main
 	listener &
 
 	# Fetch the name of the local file
-	tcpget "$hailingport" > "$namefile"
+	tcpcat -listen "$hailingport" -pipe > "$namefile"
 	receive_file=$(cat "$namefile")
 
 	# Error check
@@ -67,7 +67,7 @@ function listener
     for try in {1..5}
     do
 	sleep 0.5
-	tcpget "$mainport" > "$tmpfile" || continue
+	tcpcat -listen "$mainport" -pipe > "$tmpfile" || continue
         return
     done
 }
