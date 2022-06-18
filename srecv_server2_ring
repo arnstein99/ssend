@@ -14,6 +14,7 @@ mainport=7891
 
 namefile="$(mktemp -t srecv_server2XXXX)"
 tmpfile="$(mktemp -t srecv_server2XXXX)"
+declare -i pid=-1
 
 function main
 {
@@ -27,7 +28,7 @@ function main
     trap "break" ERR SIGHUP SIGINT SIGTERM
     while true
     do
-	listener &
+	listener
 
 	# Fetch the name of the local file
 	tcpcat -listen "$hailingport" -pipe > "$namefile"
@@ -63,19 +64,17 @@ function main
 # name for the file is not known, so a temporary name is used.
 function listener
 {
-    # Five tries to access the listening port
-    for try in {1..5}
-    do
-	sleep 0.5
-	tcpcat -listen "$mainport" -pipe > "$tmpfile" || continue
-        return
-    done
+    tcpcat -listen "$mainport" -pipe > "$tmpfile" &
+    pid=$!
 }
 
 function cleanup
 {
     rm -f "$namefile"
-    kill -9 %1
+    if [ $pid -gt 0 ]
+    then
+        kill -9 $pid
+    fi
 }
 
 # Begin execution
