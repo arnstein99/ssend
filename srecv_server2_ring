@@ -20,41 +20,41 @@ function main
 {
     if [ $# -ne 0 ]
     then
-	echo Usage: srecv_server2 >&2
-	exit 1
+        echo Usage: srecv_server2 >&2
+        exit 1
     fi
 
     cd
     trap "break" ERR SIGHUP SIGINT SIGTERM
     while true
     do
-	listener
+        listener
 
-	# Fetch the name of the local file
-	tcpcat -listen "$hailingport" -pipe > "$namefile"
-	receive_file=$(cat "$namefile")
+        # Fetch the name of the local file
+        tcpcat -listen "$hailingport" -pipe > "$namefile"
+        receive_file=$(cat "$namefile")
 
-	# Error check
-	if [ -d "$receive_file" ]
-	then
-	    echo "$(date) ERROR: \"${receive_file}\" is a directory"
-	    wait
-	    continue
-	fi
+        # Error check
+        if [ -d "$receive_file" ]
+        then
+            echo "$(date) ERROR: \"${receive_file}\" is a directory"
+            wait
+            continue
+        fi
 
-	# Wait for the listener to finish receiving file
-	echo -n "$(date) receiving $receive_file ..."
-	wait
+        # Wait for the listener to finish receiving file
+        echo -n "$(date) receiving $receive_file ..."
+        wait
 
-	# Another error check
-	if [ ! -e "$tmpfile" ]
-	then
-	    echo ""
-	    echo "ERROR: could not find temporary file"
-	    continue
-	fi
-	mv "$tmpfile" "$receive_file" || continue
-	echo " done"
+        # Another error check
+        if [ ! -e "$tmpfile" ]
+        then
+            echo ""
+            echo "ERROR: could not find temporary file"
+            continue
+        fi
+        mv "$tmpfile" "$receive_file" || continue
+        echo " done"
     done
     trap "" ERR SIGHUP SIGINT SIGTERM
     cleanup
