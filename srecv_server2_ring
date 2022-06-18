@@ -64,6 +64,7 @@ function main
 # name for the file is not known, so a temporary name is used.
 function listener
 {
+    sleep 0.5
     tcpcat -listen "$mainport" -pipe > "$tmpfile" &
     pid=$!
 }
