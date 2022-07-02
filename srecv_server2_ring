@@ -33,6 +33,7 @@ function main
         # Fetch the name of the local file
         tcpcat -listen "$hailingport" -pipe > "$namefile"
         receive_file=$(cat "$namefile")
+        rm "$namefile"
 
         # Error check
         if [ -d "$receive_file" ]
@@ -71,7 +72,7 @@ function listener
 
 function cleanup
 {
-    rm -f "$namefile"
+    rm -f "$namefile" "$tmpfile"
     if [ $pid -gt 0 ]
     then
         kill -9 $pid
